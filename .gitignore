@@ -1,0 +1,6 @@
+# python project
+*.pyc
+
+# ply compiled parser
+parser.out
+parsetab.py
