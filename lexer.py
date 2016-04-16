@@ -1,7 +1,7 @@
 import ply.lex as lex
 
 
-class DELLexer(object):
+class WhisperLexer(object):
     def __init__(self, **kwargs):
         self._lexer = lex.lex(module=self, **kwargs)
 

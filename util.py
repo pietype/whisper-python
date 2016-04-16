@@ -1,4 +1,8 @@
-class LV(object):
+import logging as logger
+logger.basicConfig(level=logger.DEBUG)
+
+
+class LazyValue(object):
     def __init__(self, expression):
         self._expression = expression
         self._result = None
@@ -13,6 +17,8 @@ class Object(object):
     id_counter = 0
 
     def __init__(self, prototype=None):
+        self._can_resolve_items = True
+
         if prototype is None:
             self.defaults = []
             self.items = {}
@@ -26,7 +32,7 @@ class Object(object):
         else:
             self.defaults = prototype.defaults
             self.items = prototype.items
-            self.expression = LV(prototype.expression._expression) if prototype.expression else None
+            self.expression = LazyValue(prototype.expression._expression) if prototype.expression else None
             self.arguments = prototype.arguments
             self.arguments_scope = prototype.arguments_scope
             self.parent = prototype.parent
@@ -48,3 +54,13 @@ raw %s''' % (self.defaults, self.items, self.expression, self.arguments, self.pa
 
 class WRException(Exception):
     pass
+
+
+# class FailedException(Exception):
+#     def __init__(self, wr_exception):
+#         self.raw = wr_exception
+#
+#
+# def _check_failed(object):
+#     if type(object.raw) is WRException:
+#         raise FailedException(object)

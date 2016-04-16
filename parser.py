@@ -1,6 +1,6 @@
 import ply.yacc as yacc
 
-from lexer import DELLexer
+from lexer import WhisperLexer
 
 
 def pretty_print_syntax_errors(input):
@@ -21,9 +21,9 @@ def pretty_print_syntax_errors(input):
     return f
 
 
-class DELParser(object):
+class WhisperParser(object):
     def __init__(self, **kwargs):
-        self._calc_lexer = DELLexer()
+        self._calc_lexer = WhisperLexer()
 
         # build the parser
         self.tokens = self._calc_lexer.tokens
