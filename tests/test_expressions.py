@@ -1,4 +1,4 @@
-from unittest import TestCase
+from unittest import TestCase, skip
 
 from parser import WhisperParser
 from runtime import evaluate
@@ -45,9 +45,57 @@ class TestList(TestBase):
         [0, 1].map((e){ e })'''
         self._test(e, [0, 1])
 
+    def test_map3(self):
+        e = '''
+        [0, 1, 2, 3].map((e){ e + 1 })'''
+        self._test(e, [1, 2, 3, 4])
+
 
 class TestString(TestBase):
     def test_slice1(self):
         e = '''
         'abc'[1:]'''
         self._test(e, 'bc')
+
+
+class Experimental(TestBase):
+    def test_reduce_sum1(self):
+        e = '''
+        reduce: (list){
+          (f){
+            f(list[0])(parent(list[1:0])(f)) or list[0]
+          }
+        }
+        reduce([0, 1])((a){ (b){ a + b } })'''
+        self._test(e, 1)
+
+    def test_reduce_sum2(self):
+        e = '''
+        reduce: (list){
+          (f){
+            f(list[0])(parent(list[1:0])(f)) or list[0]
+          }
+        }
+        reduce([0, 1, 2, 3, 4, 5])((a){ (b){ a + b } })'''
+        self._test(e, 15)
+
+    def test_reduce_single(self):
+        e = '''
+        reduce: (list){
+          (f){
+            f(list[0])(parent(list[1:0])(f)) or list[0]
+          }
+        }
+        reduce([1])((a){ (b){ a + b } })'''
+        self._test(e, 1)
+
+    @skip
+    def test_reduce_empty(self):
+        e = '''
+        reduce: (list){
+          (f){
+            f(list[0])(parent(list[1:0])(f)) or list[0]
+          }
+        }
+        reduce([])((a){ (b){ a + b } })'''
+        self._test(e, 1)

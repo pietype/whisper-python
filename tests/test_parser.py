@@ -327,7 +327,7 @@ class TestRuntime(TestCase):
           match: (input){              # external interface
             match: (input, state: 0){  # implementation with internal binding
               next: states[state][input[0]]
-              me(input[1:], state: next) or state = states.length()
+              me(input[1:], state: next) or state = states.length()  # infinite recursion because next never gets evaluated
             }
 
             match(input)

@@ -1,4 +1,4 @@
-from util import logger, Object, WRException, LazyValue as LV
+from util import logger, Object, WRException, LazyValue as LV, _partial
 
 
 # TODO patchwork, needs refactoring
@@ -16,20 +16,16 @@ def evaluate(node):
         # things evaluate in the wrong order inside comprehension
         _args = []
         for i, e in arguments:
-            def _make_lambda(e):
-                def _lambda():
-                    return evaluate(e)
-                return _lambda
-            _args.append((evaluate(i) if i else None, LV(_make_lambda(e))))
+            _args.append((evaluate(i) if i else None, LV(_partial(evaluate, e))))
         return call(evaluate(function), _args)
 
     if command == 'create_dict':
         defaults = node[1]
         items = node[2]
         expression = node[3]
-        return create_object(defaults=[(evaluate(i).raw, LV(lambda: evaluate(e)) if e else None) for i, e in defaults],
-                             items=dict([(evaluate(k).raw, LV(lambda: evaluate(v))) for k, v in items.items()]),
-                             expression=LV(lambda: evaluate(expression)))
+        return create_object(defaults=[(evaluate(i).raw, LV(_partial(evaluate, e)) if e else None) for i, e in defaults],
+                             items=dict([(evaluate(k).raw, LV(_partial(evaluate, v))) for k, v in items.items()]),
+                             expression=LV(_partial(evaluate, expression)))
 
     if command == 'create_number':
         native = node[1]
@@ -105,6 +101,7 @@ def _expression_with_scope(expression, scope):
 def _get_scope_dict(scope):
     output = {
         'me': lambda: scope,
+        'parent': lambda: scope.parent,
         'self': lambda: scope.self,
     }
 
@@ -329,7 +326,10 @@ def _native_length(o):
 
 
 def _native_add(a, b):
-    return create_number(a.raw + b.raw)
+    try:
+        return create_number(a.raw + b.raw)
+    except TypeError as e:
+        return create_failed(e)
 
 
 def evaluate_module(items={}, expression=None):

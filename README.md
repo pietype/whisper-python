@@ -7,3 +7,4 @@
   [x] map
   [x] create_list has to take expressions
 [ ] Dict
+[ ] Lazy evaluation vs Failing expressions

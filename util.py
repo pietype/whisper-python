@@ -2,6 +2,12 @@ import logging as logger
 logger.basicConfig(level=logger.DEBUG)
 
 
+def _partial(f, a):
+    def _lambda():
+        return f(a)
+    return _lambda
+
+
 class LazyValue(object):
     def __init__(self, expression):
         self._expression = expression
