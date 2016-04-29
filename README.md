@@ -6,5 +6,7 @@
 [x] List
   [x] map
   [x] create_list has to take expressions
+  [x] reduce
 [ ] Dict
 [ ] Lazy evaluation vs Failing expressions
+  [ ] Rewrite failed automaton implementation
