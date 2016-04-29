@@ -295,6 +295,20 @@ def create_list(native):
                     [(None, LV(lambda: resolve('function')))]
                 )))]
             )), [(None, LV(lambda: create_list([])))])))),
+        # reduce: (f){
+        #   f(self[0])(self[1:].reduce(f)) or self[0]
+        # }
+        'reduce': LV(lambda: create_object(
+            defaults=[('function', None)],
+            expression=LV(lambda: call(
+                get(create_string('or'),
+                    call(call(resolve('function'),
+                              [(None, LV(lambda: get(create_number(0), resolve('self'))))]),
+                         [(None, LV(lambda: call(
+                             get(create_string('reduce'),
+                                 slice(resolve('self'), 1)),
+                             [(None, LV(lambda: resolve('function')))])))])),
+                [(None, LV(lambda: get(create_number(0), resolve('self'))))])))),
     })
     return output
 

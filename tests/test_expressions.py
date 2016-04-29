@@ -2,6 +2,7 @@ from unittest import TestCase, skip
 
 from parser import WhisperParser
 from runtime import evaluate
+from util import WRException
 
 
 class TestBase(TestCase):
@@ -17,6 +18,11 @@ class TestBase(TestCase):
                 self.assertEquals(r.raw, e)
         else:
             self.assertEquals(output.raw, expected_result)
+
+    def _test_failed(self, expression):
+        node = self.parser.parse(expression)
+        output = evaluate(('call', node, []))
+        self.assertTrue(type(output.raw) is WRException)
 
 
 class TestList(TestBase):
@@ -49,6 +55,26 @@ class TestList(TestBase):
         e = '''
         [0, 1, 2, 3].map((e){ e + 1 })'''
         self._test(e, [1, 2, 3, 4])
+
+    def test_reduce_sum1(self):
+        e = '''
+        [0, 1].reduce((a){ (b){ a + b } })'''
+        self._test(e, 1)
+
+    def test_reduce_sum2(self):
+        e = '''
+        [0, 1, 2, 3, 4, 5].reduce((a){ (b){ a + b } })'''
+        self._test(e, 15)
+
+    def test_reduce_sum_single(self):
+        e = '''
+        [1].reduce((a){ (b){ a + b } })'''
+        self._test(e, 1)
+
+    def test_reduce_sum_empty(self):
+        e = '''
+        [].reduce((a){ (b){ a + b } })'''
+        self._test_failed(e)
 
 
 class TestString(TestBase):
