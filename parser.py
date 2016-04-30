@@ -1,6 +1,7 @@
 import ply.yacc as yacc
 
 from lexer import WhisperLexer
+from util import WRException
 
 
 def pretty_print_syntax_errors(input):
@@ -8,6 +9,8 @@ def pretty_print_syntax_errors(input):
     input = input[1:-1]
 
     def f(error):
+        if error.lexpos > len(input):
+            return 'Unexpected end of file'
         lines = input.split('\n')
         line_number = 0
         line_position = error.lexpos - 1
@@ -37,7 +40,7 @@ class WhisperParser(object):
         output = self._parser.parse(string)
         if output and not self._errors:
             return output
-        raise Exception("Syntax error\n" + ''.join(map(pretty_print_syntax_errors(string), self._errors)))
+        raise WRException("Syntax error\n" + ''.join(map(pretty_print_syntax_errors(string), self._errors)))
 
     @classmethod
     def _dict_values_to_dict(cls, dv):
@@ -55,6 +58,10 @@ class WhisperParser(object):
     def p_dict_expression(self, p):
         'dict : LBRACE newline_opt infix_chain newline_opt RBRACE'
         p[0] = ('create_dict', [], {}, p[3])
+
+    def p_dict_bind(self, p):
+        'dict : LPAREN bind RPAREN LBRACE newline_opt RBRACE'
+        p[0] = ('create_dict', p[2], {}, None)
 
     def p_dict_bind_expression(self, p):
         'dict : LPAREN bind RPAREN LBRACE newline_opt infix_chain newline_opt RBRACE'

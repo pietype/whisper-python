@@ -84,4 +84,21 @@ class TestString(TestBase):
         self._test(e, 'bc')
 
 
-# class Experimental(TestBase):
+class Experimental(TestBase):
+    def test_finite_state_automaton(self):
+        expression = '''
+        Automaton: (states){
+          match: (input){
+
+          }
+        }
+        input: "ab"
+
+        Automaton([{
+          a: 1
+        },
+        {
+          b: 2
+        }]).match(input)'''
+        expected_output = True
+        self._test(expression, expected_output)

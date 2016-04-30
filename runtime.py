@@ -1,7 +1,15 @@
+import os
+
+from parser import WhisperParser
 from util import logger, Object, WRException, LazyValue as LV, _partial
 
 
+_parser = WhisperParser(method='LALR')
+
+
 # TODO patchwork, needs refactoring
+IMPORT_PATH = '/Users/grzegorz/Projects/Whisper/whisper/core'
+
 def evaluate(node):
     if node is None:  # no expression in object
         # logger.debug('create object')
@@ -10,8 +18,7 @@ def evaluate(node):
     command = node[0]
 
     if command == 'call':
-        function = node[1]
-        arguments = node[2]
+        function, arguments = node[1:]
 
         # things evaluate in the wrong order inside comprehension
         _args = []
@@ -20,12 +27,16 @@ def evaluate(node):
         return call(evaluate(function), _args)
 
     if command == 'create_dict':
-        defaults = node[1]
-        items = node[2]
-        expression = node[3]
+        defaults, items, expression = node[1:]
+
         return create_object(defaults=[(evaluate(i).raw, LV(_partial(evaluate, e)) if e else None) for i, e in defaults],
                              items=dict([(evaluate(k).raw, LV(_partial(evaluate, v))) for k, v in items.items()]),
                              expression=LV(_partial(evaluate, expression)))
+
+    if command == 'create_list':
+        native = node[1]
+        evaluated = [evaluate(n) for n in native]
+        return create_list(evaluated)
 
     if command == 'create_number':
         native = node[1]
@@ -35,15 +46,13 @@ def evaluate(node):
         native = node[1]
         return create_string(native)
 
-    if command == 'create_list':
-        native = node[1]
-        evaluated = [evaluate(n) for n in native]
-        return create_list(evaluated)
-
     if command == 'get':
-        object = node[1]
-        item = node[2]
+        object, item = node[1:]
         return get(evaluate(item), evaluate(object))
+
+    if command == 'import':
+        path = node[1]
+        return evaluate(_import(evaluate(path)))
 
     if command == 'infix_chain':
         # TODO operator priority
@@ -55,17 +64,14 @@ def evaluate(node):
         return evaluate(o)
 
     if command == 'resolve':
-        item = node[1]
-        object = node[2]
+        item, object = node[1:]
         if object is None:
             return resolve(evaluate(item).raw)
         else:  # get
             return get(evaluate(item), evaluate(object))
 
     if command == 'slice':
-        object = node[1]
-        _from = node[2]
-        _to = node[3]
+        object, _from, _to = node[1:]
         return slice(evaluate(object), evaluate(_from).raw, evaluate(_to).raw if _to else None)
 
     raise Exception('Unknown command: %s' % command)
@@ -350,6 +356,16 @@ def evaluate_module(items={}, expression=None):
     module = create_object(items=items, expression=expression)
 
     return call(module, [])
+
+
+_import_cache = {}
+def _import(path):
+    if path.raw in _import_cache:
+        return _import_cache[path.raw]
+    with open(os.path.join(IMPORT_PATH, path.raw) + '.w', 'r') as f:
+        node = _parser.parse(f.read())
+        _import_cache[path] = node
+        return node
 
 
 # bootstrap scope_stack

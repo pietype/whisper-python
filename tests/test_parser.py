@@ -321,29 +321,6 @@ class TestRuntime(TestCase):
         '''
         self._test(expression, 1)
 
-    def test_new6(self):
-        expression = '''
-        Automaton: (states){           # handle two argument match
-          match: (input){              # external interface
-            match: (input, state: 0){  # implementation with internal binding
-              next: states[state][input[0]]
-              me(input[1:], state: next) or state = states.length()  # infinite recursion because next never gets evaluated
-            }
-
-            match(input)
-          }
-        }
-        input: "ab"
-
-        Automaton([{
-          a: 1
-        },
-        {
-          b: 2
-        }]).match(input)'''
-        expected_output = True
-        self._test(expression, expected_output)
-
     def test_constructor(self):
         expression = '''
         O: (v){
