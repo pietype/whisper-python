@@ -1,4 +1,4 @@
-from unittest import TestCase
+from unittest import TestCase, skip
 
 from parser import WhisperParser
 from runtime import evaluate
@@ -40,6 +40,31 @@ class TestList(TestBase):
         e = '''
         [0, 1, 2, 3, 4].length()'''
         self._test(e, 5)
+
+    def test_slice1(self):
+        e = '''
+        [0, 1, 2, 3][1:2]'''
+        self._test(e, [1, 2])
+
+    def test_slice2(self):
+        e = '''
+        [0, 1, 2, 3][2:]'''
+        self._test(e, [2, 3])
+
+    def test_slice3(self):
+        e = '''
+        [0, 1, 2, 3][:2]'''
+        self._test(e, [0, 1])
+
+    def test_slice4(self):
+        e = '''
+        [0, 1, 2, 3][3:5]'''
+        self._test(e, [3])
+
+    def test_slice5(self):
+        e = '''
+        [0, 1, 2, 3][6:7]'''
+        self._test(e, [])
 
     def test_map1(self):
         e = '''
@@ -83,22 +108,45 @@ class TestString(TestBase):
         'abc'[1:]'''
         self._test(e, 'bc')
 
+    def test_get1(self):
+        e = '''
+        'abc'[1:2]'''
+        self._test(e, 'b')
+
 
 class Experimental(TestBase):
-    def test_finite_state_automaton(self):
+    def test_import_re1(self):
         expression = '''
-        Automaton: (states){
-          match: (input){
-
-          }
-        }
-        input: "ab"
-
-        Automaton([{
-          a: 1
-        },
-        {
-          b: 2
-        }]).match(input)'''
-        expected_output = True
+        RegularExpressions: import
+        RegularExpressions.Node({a: 1}).match('a')'''
+        expected_output = True  # TODO apparently 1 == True, not sure this works fine
         self._test(expression, expected_output)
+
+    def test_import_re2(self):
+        expression = '''
+        RegularExpressions: import
+        RegularExpressions.Node({a: 1}).match('abc')'''
+        expected_output = True  # TODO apparently 1 == True, not sure this works fine
+        self._test(expression, expected_output)
+
+    def test_import_re_failed1(self):
+        expression = '''
+        RegularExpressions: import
+        RegularExpressions.Node({a: 1}).match('bca')'''
+        self._test_failed(expression)
+
+    def test_import_re_failed2(self):
+        expression = '''
+        RegularExpressions: import
+        RegularExpressions.Node({a: 1}).match('')'''
+        self._test_failed(expression)
+
+    def test_import_re_automaton(self):
+        expression = '''
+        RegularExpressions: import
+        input: 'ab'
+        {
+           RegularExpressions.Automaton([RegularExpressions.Node({a: 1}),
+                                         RegularExpressions.Node({b: 2})]).match(input)
+        }()'''
+        self._test(expression, True)

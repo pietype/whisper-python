@@ -172,6 +172,20 @@ class TestLexer(TestCase):
     # def test_e8(self):
     #     self._test(EXPRESSIONS[8], LEXER_EXPECTED[8])
 
+    def test_empty_string1(self):
+        expression = '""'
+        expected_output = [
+            ('STRING', '')
+        ]
+        self._test(expression, expected_output)
+
+    def test_empty_string2(self):
+        expression = "''"
+        expected_output = [
+            ('STRING', '')
+        ]
+        self._test(expression, expected_output)
+
 
 class TestParser(TestCase):
     def _test(self, string, expected_output):

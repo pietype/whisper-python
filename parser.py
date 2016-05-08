@@ -197,7 +197,7 @@ class WhisperParser(object):
 
     def p_expression_slice_to_end(self, p):
         'expression : expression LBRACKET newline_opt expression newline_opt COLON newline_opt RBRACKET'
-        p[0] = ('slice', p[1], p[4], ('call', ('resolve', ('create_string', 'length'), p[1]), []))
+        p[0] = ('slice', p[1], p[4], None)
 
     def p_separator(self, p):
         '''separator : newline

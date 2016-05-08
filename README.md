@@ -12,3 +12,6 @@
   [ ] Rewrite failed automaton implementation
 [ ] Native interface
 [ ] Reflection
+[ ] Better error message
+  [ ] Root cause
+  [ ] Stack trace

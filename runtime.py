@@ -10,6 +10,7 @@ _parser = WhisperParser(method='LALR')
 # TODO patchwork, needs refactoring
 IMPORT_PATH = '/Users/grzegorz/Projects/Whisper/whisper/core'
 
+
 def evaluate(node):
     if node is None:  # no expression in object
         # logger.debug('create object')
@@ -20,7 +21,7 @@ def evaluate(node):
     if command == 'call':
         function, arguments = node[1:]
 
-        # things evaluate in the wrong order inside comprehension
+        # things evaluate in the wrong order inside a comprehension
         _args = []
         for i, e in arguments:
             _args.append((evaluate(i) if i else None, LV(_partial(evaluate, e))))
@@ -75,7 +76,7 @@ def evaluate(node):
         return slice(evaluate(object), evaluate(_from).raw, evaluate(_to).raw if _to else None)
 
     raise Exception('Unknown command: %s' % command)
-## TODO end patchwork
+# TODO end patchwork
 
 
 def call(function, arguments):
@@ -185,7 +186,7 @@ def _new_with_arguments(prototype, arguments, arguments_scope):
     output.arguments = arguments
     output.arguments_scope = arguments_scope
 
-    logger.debug('arguments scope {} (for {})'.format(output._id, prototype._id))
+    # logger.debug('arguments scope {} (for {})'.format(output._id, prototype._id))
     return output
 
 
@@ -193,7 +194,7 @@ def _new_with_self(prototype, self):
     output = Object(prototype=prototype)
     output.self = self
 
-    logger.debug('self scope {} (for {})'.format(output._id, prototype._id))
+    # logger.debug('self scope {} (for {})'.format(output._id, prototype._id))
     return output
 
 
@@ -202,7 +203,7 @@ def _item_resolution_scope(scope):
     output._can_resolve_items = False
     # output.parent = scope
 
-    logger.debug('item resolution scope {} (for {})'.format(output._id, scope._id))
+    # logger.debug('item resolution scope {} (for {})'.format(output._id, scope._id))
     return output
 
 
@@ -227,7 +228,7 @@ def create_object(defaults=[], items={}, expression=None):
     output.parent = scope_stack[-1]
     output.arguments_scope = output.parent
 
-    logger.debug('create object {} {} {} (parent {})'.format(output._id, defaults, items, output.parent._id))
+    # logger.debug('create object {} {} {} (parent {})'.format(output._id, defaults, items, output.parent._id))
     return output
 
 
@@ -249,6 +250,10 @@ def _create_native(value):
             defaults=[('other', None)],
             expression=LV(lambda: resolve('self'))
         )),
+        'then': LV(lambda: create_object(
+            defaults=[('callable', None)],
+            expression=LV(lambda: call(resolve('callable'), [(None, LV(lambda: resolve('self')))]))
+        )),
     }
     output.parent = scope_stack[0]
     output.arguments_scope = output.parent
@@ -259,7 +264,7 @@ def _create_native(value):
     except TypeError:  # unhashable type
         pass
 
-    logger.debug('create native {} {}'.format(output._id, value))
+    # logger.debug('create native {} {}'.format(output._id, value))
     return output
 
 
