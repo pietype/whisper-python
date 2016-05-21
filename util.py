@@ -1,5 +1,7 @@
-import logging as logger
-logger.basicConfig(level=logger.DEBUG)
+import logging
+logging.basicConfig(level=logging.ERROR)
+logger = logging.getLogger('whisper')
+logger.setLevel(logging.DEBUG)
 
 
 def _partial(f, a):
@@ -57,6 +59,8 @@ arguments %s
 parent %s
 raw %s''' % (self.defaults, self.items, self.expression, self.arguments, self.parent is not None, self.raw)
 
+    def __repr__(self):
+        return str(self.raw)
 
 class WRException(Exception):
     pass

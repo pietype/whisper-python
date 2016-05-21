@@ -101,6 +101,11 @@ class TestList(TestBase):
         [].reduce((a){ (b){ a + b } })'''
         self._test_failed(e)
 
+    def test_map_reduce(self):
+        e = '''
+        [0, 1, 2].map((e){ e + 1 }).reduce((a){ (b){ a + b } })'''
+        self._test(e, 6)
+
 
 class TestString(TestBase):
     def test_slice1(self):

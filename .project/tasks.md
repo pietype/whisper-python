@@ -10,8 +10,13 @@
 [ ] Dict
 [ ] Lazy evaluation vs Failing expressions
   [ ] Rewrite failed automaton implementation
+  [ ] Implement then 
+    [ ] object
+    [ ] failed
 [ ] Native interface
 [ ] Reflection
 [ ] Better error message
   [ ] Root cause
   [ ] Stack trace
+[ ] Map return value problem - reduce not in scope
+[ ] Print objects
