@@ -6,14 +6,14 @@ from util import WRException
 
 def pretty_print_syntax_errors(input):
     # adjusting for parse hack
-    input = input[1:-1]
+    input = input[3:-1]
 
     def f(error):
         if error.lexpos > len(input):
             return 'Unexpected end of file'
         lines = input.split('\n')
         line_number = 0
-        line_position = error.lexpos - 1
+        line_position = error.lexpos - 3
         while line_position >= len(lines[line_number]):
             line_position -= len(lines[line_number]) + 1  # +1 for newline
             line_number += 1
@@ -36,52 +36,56 @@ class WhisperParser(object):
 
     def parse(self, string):
         # hack - makes it easier to define start symbol for parsing files
-        string = '{' + string + '}'
+        string = '(){' + string + '}'
         output = self._parser.parse(string)
         if output and not self._errors:
             return output
         raise WRException("Syntax error\n" + ''.join(map(pretty_print_syntax_errors(string), self._errors)))
 
     @classmethod
-    def _dict_values_to_dict(cls, dv):
+    def _scope_values_to_dict(cls, dv):
         return dict([(l[1], l[2]) for l in dv[1][1]])
 
     # see parse
     def p_start(self, p):
-        'start : newline_opt dict newline_opt'
+        'start : newline_opt scope newline_opt'
         p[0] = p[2]
 
-    def p_dict(self, p):
-        'dict : LBRACE newline_opt RBRACE'
-        p[0] = ('create_dict', [], {}, None)
+    def p_scope(self, p):
+        'scope : LPAREN newline_opt RPAREN LBRACE newline_opt RBRACE'
+        p[0] = ('create_scope', [], {}, None)
 
-    def p_dict_expression(self, p):
-        'dict : LBRACE newline_opt infix_chain newline_opt RBRACE'
-        p[0] = ('create_dict', [], {}, p[3])
+    def p_scope_expression(self, p):
+        'scope : LPAREN newline_opt RPAREN LBRACE newline_opt infix_chain newline_opt RBRACE'
+        p[0] = ('create_scope', [], {}, p[6])
 
-    def p_dict_bind(self, p):
-        'dict : LPAREN bind RPAREN LBRACE newline_opt RBRACE'
-        p[0] = ('create_dict', p[2], {}, None)
+    def p_scope_bind(self, p):
+        'scope : LPAREN bind RPAREN LBRACE newline_opt RBRACE'
+        p[0] = ('create_scope', p[2], {}, None)
 
-    def p_dict_bind_expression(self, p):
-        'dict : LPAREN bind RPAREN LBRACE newline_opt infix_chain newline_opt RBRACE'
-        p[0] = ('create_dict', p[2], {}, p[6])
+    def p_scope_bind_expression(self, p):
+        'scope : LPAREN bind RPAREN LBRACE newline_opt infix_chain newline_opt RBRACE'
+        p[0] = ('create_scope', p[2], {}, p[6])
 
-    def p_dict_bind_let_list(self, p):
-        'dict : LPAREN bind RPAREN LBRACE newline_opt let_list newline_opt RBRACE'
-        p[0] = ('create_dict', p[2], dict([(l[1], l[2]) for l in p[6]]), None)
+    def p_scope_bind_let_list(self, p):
+        'scope : LPAREN bind RPAREN LBRACE newline_opt let_list newline_opt RBRACE'
+        p[0] = ('create_scope', p[2], dict([(l[1], l[2]) for l in p[6]]), None)
 
-    def p_dict_let_list(self, p):
-        'dict : LBRACE newline_opt let_list newline_opt RBRACE'
-        p[0] = ('create_dict', [], dict([(l[1], l[2]) for l in p[3]]), None)
+    def p_scope_let_list(self, p):
+        'scope : LPAREN newline_opt RPAREN LBRACE newline_opt let_list newline_opt RBRACE'
+        p[0] = ('create_scope', [], dict([(l[1], l[2]) for l in p[6]]), None)
 
-    def p_dict_let_list_expression(self, p):
-        'dict : LBRACE newline_opt let_list separator infix_chain newline_opt RBRACE'
-        p[0] = ('create_dict', [], dict([(l[1], l[2]) for l in p[3]]), p[5])
+    # def p_scope_let_list(self, p):
+    #     'scope : LBRACE newline_opt let_list newline_opt RBRACE'
+    #     p[0] = ('create_scope', [], dict([(l[1], l[2]) for l in p[3]]), None)
 
-    def p_dict_bind_let_list_expression(self, p):
-        'dict : LPAREN bind RPAREN LBRACE newline_opt let_list separator infix_chain newline_opt RBRACE'
-        p[0] = ('create_dict', p[2], dict([(l[1], l[2]) for l in p[6]]), p[8])
+    def p_scope_let_list_expression(self, p):
+        'scope : LPAREN newline_opt RPAREN LBRACE newline_opt let_list separator infix_chain newline_opt RBRACE'
+        p[0] = ('create_scope', [], dict([(l[1], l[2]) for l in p[6]]), p[8])
+
+    def p_scope_bind_let_list_expression(self, p):
+        'scope : LPAREN bind RPAREN LBRACE newline_opt let_list separator infix_chain newline_opt RBRACE'
+        p[0] = ('create_scope', p[2], dict([(l[1], l[2]) for l in p[6]]), p[8])
 
     def p_bind(self, p):
         'bind : ident'
@@ -126,6 +130,26 @@ class WhisperParser(object):
     def p_expression_number(self, p):
         'expression : NUMBER'
         p[0] = ('create_number', p[1])
+
+    def p_expression_dictionary(self, p):
+        'expression : dictionary'
+        p[0] = ('create_dictionary', p[1])
+
+    def p_dictionary_empty(self, p):
+        'dictionary : LBRACE newline_opt RBRACE'
+        p[0] = []
+
+    def p_dictionary(self, p):
+        'dictionary : LBRACE newline_opt dictionary_items newline_opt RBRACE'
+        p[0] = p[3]
+
+    def p_dictionary_items_item(self, p):
+        'dictionary_items : expression COLON expression'
+        p[0] = [(p[1], p[3])]
+
+    def p_dictionary_items_items(self, p):
+        'dictionary_items : dictionary_items separator expression COLON expression'
+        p[0] = p[1] + [(p[3], p[5])]
 
     def p_expression_list(self, p):
         'expression : list'
@@ -175,8 +199,8 @@ class WhisperParser(object):
         'expression : expression DOT ident'
         p[0] = ('resolve', p[3], p[1])
 
-    def p_expression_dict(self, p):
-        'expression : dict'
+    def p_expression_scope(self, p):
+        'expression : scope'
         p[0] = p[1]
 
     def p_expression_string(self, p):

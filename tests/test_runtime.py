@@ -1,6 +1,7 @@
 import unittest
 
-from runtime import call, resolve, get, evaluate_module, create_object, create_number, create_list, create_string, slice
+from runtime import call, resolve, attribute, evaluate_module, create_object, create_number, create_list, create_string, slice, \
+    get
 from util import LazyValue as LV, WRException
 
 
@@ -17,7 +18,7 @@ class TestRuntime(unittest.TestCase):
 
     def test_fail1(self):
         # [][0]
-        result = evaluate_module(expression=LV(lambda: get(create_number(0), create_list([]))))
+        result = evaluate_module(expression=LV(lambda: attribute(create_number(0), create_list([]))))
         self._test_fail(result)
 
     def test_fail2(self):
@@ -58,7 +59,7 @@ class TestRuntime(unittest.TestCase):
         # }
         # o.i
         result = evaluate_module(items={'o': LV(lambda: create_object(items={'i': LV(lambda: create_number(4))}))},
-                                 expression=LV(lambda: get(create_string('i'), resolve('o'))))
+                                 expression=LV(lambda: attribute(create_string('i'), resolve('o'))))
         self._test(result, 4)
 
     def test_e5(self):
@@ -79,9 +80,9 @@ class TestRuntime(unittest.TestCase):
         # }
         # o.m()
         result = evaluate_module(items={'o': LV(lambda: create_object(items={
-            'm': LV(lambda: create_object(expression=LV(lambda: get(create_string('i'), resolve('self'))))),
+            'm': LV(lambda: create_object(expression=LV(lambda: attribute(create_string('i'), resolve('self'))))),
             'i': LV(lambda: create_number(6)),
-        }))}, expression=LV(lambda: call(get(create_string('m'), resolve('o')), [])))
+        }))}, expression=LV(lambda: call(attribute(create_string('m'), resolve('o')), [])))
         self._test(result, 6)
 
     def test_e7(self):
@@ -95,12 +96,12 @@ class TestRuntime(unittest.TestCase):
         # }()
         result = evaluate_module(
             items={
-                'm': LV(lambda: create_object(expression=LV(lambda: get(create_string('i'), resolve('self')))))
+                'm': LV(lambda: create_object(expression=LV(lambda: attribute(create_string('i'), resolve('self')))))
             },
             expression=LV(lambda: call(create_object(
                 items={'o': LV(lambda: create_object(items={'m': LV(lambda: resolve('m')),
                                                             'i': LV(lambda: create_number(7))}))},
-                expression=LV(lambda: call(get(create_string('m'), resolve('o')), []))), []))
+                expression=LV(lambda: call(attribute(create_string('m'), resolve('o')), []))), []))
         )
         self._test(result, 7)
 
@@ -118,13 +119,13 @@ class TestRuntime(unittest.TestCase):
         # }()
         result = evaluate_module(
             items={
-                'm': LV(lambda: create_object(expression=LV(lambda: get(create_string('i'), resolve('self')))))
+                'm': LV(lambda: create_object(expression=LV(lambda: attribute(create_string('i'), resolve('self')))))
             },
             expression=LV(lambda: call(create_object(
                 items={'o': LV(lambda: create_object(items={'m': LV(lambda: resolve('m')),
                                                             'i': LV(lambda: create_number(8))}))},
                 expression=LV(lambda: call(create_object(
-                    items={'m': LV(lambda: get(create_string('m'), resolve('o')))},
+                    items={'m': LV(lambda: attribute(create_string('m'), resolve('o')))},
                     expression=LV(lambda: call(resolve('m'), []))), []))), []))
         )
         self._test(result, 8)
@@ -166,8 +167,8 @@ class TestRuntime(unittest.TestCase):
         result = evaluate_module(
             items={'sum': LV(lambda: create_object(
                 defaults=[('list', None)],
-                expression=LV(lambda: call(get(create_string('or'), call(
-                    get(create_string('+'), get(create_number(0), resolve('list'))),
+                expression=LV(lambda: call(attribute(create_string('or'), call(
+                    attribute(create_string('+'), get(create_number(0), resolve('list'))),
                     [(None, LV(lambda: call(
                         resolve('me'),
                         [(None, LV(lambda: slice(resolve('list'), 1)))]
@@ -175,9 +176,9 @@ class TestRuntime(unittest.TestCase):
                 )), [(None, LV(lambda: create_number(0)))]))
             ))},
             expression=LV(lambda: call(resolve('sum'), [(None, LV(lambda: create_list([create_number(3),
-                                                                                         create_number(3),
-                                                                                         create_number(3),
-                                                                                         create_number(3)])))])))
+                                                                                       create_number(3),
+                                                                                       create_number(3),
+                                                                                       create_number(3)])))])))
         self._test(result, 12)
 
     @unittest.skip  # TODO figure out if this is a problem
@@ -191,12 +192,12 @@ class TestRuntime(unittest.TestCase):
         result = evaluate_module(
             items={'sum': LV(lambda: create_object(
                 defaults=[('list', None)],
-                expression=LV(lambda: call(get(create_string('or'), call(
-                    get(create_string('+'), call(
+                expression=LV(lambda: call(attribute(create_string('or'), call(
+                    attribute(create_string('+'), call(
                         resolve('me'),
                         [(None, LV(lambda: slice(resolve('list'), 1)))]
                     )),
-                    [(None, LV(lambda: get(create_number(0), resolve('list'))))]
+                    [(None, LV(lambda: attribute(create_number(0), resolve('list'))))]
                 )), [(None, LV(lambda: create_number(0)))]))
             ))},
             expression=LV(lambda: call(resolve('sum'),
@@ -207,14 +208,14 @@ class TestRuntime(unittest.TestCase):
         # 6 + 7
         result = evaluate_module(
             expression=LV(
-                lambda: call(get(create_string('+'), create_number(6)), [(None, LV(lambda: create_number(7)))])))
+                lambda: call(attribute(create_string('+'), create_number(6)), [(None, LV(lambda: create_number(7)))])))
         self._test(result, 13)
 
     def test_e14(self):
         # 14 or 0
         result = evaluate_module(
             expression=LV(
-                lambda: call(get(create_string('or'), create_number(14)), [(None, LV(lambda: create_number(0)))])))
+                lambda: call(attribute(create_string('or'), create_number(14)), [(None, LV(lambda: create_number(0)))])))
         self._test(result, 14)
 
     def test_map(self):
@@ -232,10 +233,10 @@ class TestRuntime(unittest.TestCase):
                 'map': LV(lambda: create_object(defaults=[('f', None)], items={
                     'map': LV(lambda: create_object(
                         defaults=[('list', None)],
-                        expression=LV(lambda: call(get(create_string('or'), call(
-                            get(create_string('+'),
-                                create_list([call(resolve('f'),
-                                                  [(None, LV(lambda: get(create_number(0), resolve('list'))))])])),
+                        expression=LV(lambda: call(attribute(create_string('or'), call(
+                            attribute(create_string('+'),
+                                      create_list([call(resolve('f'),
+                                                        [(None, LV(lambda: attribute(create_number(0), resolve('list'))))])])),
                             [(None, LV(lambda: call(
                                 resolve('me'),
                                 [(None, LV(lambda: slice(resolve('list'), 1)))]
@@ -245,12 +246,12 @@ class TestRuntime(unittest.TestCase):
             }), )
         }, expression=LV(
             lambda: call(
-                get(create_string('map'), call(resolve('wrapper'), [(None, LV(lambda: create_list([create_number(0),
-                                                                                                   create_number(3),
-                                                                                                   create_number(2),
-                                                                                                   create_number(1)])))])),
+                attribute(create_string('map'), call(resolve('wrapper'), [(None, LV(lambda: create_list([create_number(0),
+                                                                                                         create_number(3),
+                                                                                                         create_number(2),
+                                                                                                         create_number(1)])))])),
                 [(None, LV(lambda: create_object(defaults=[('e', None)],
-                                                 expression=LV(lambda: call(get(create_string('+'), resolve('e')), [
+                                                 expression=LV(lambda: call(attribute(create_string('+'), resolve('e')), [
                                                      (None, LV(lambda: create_number(1)))])))))])))
         self._test(result, [1, 4, 3, 2])
 
@@ -263,7 +264,7 @@ class TestRuntime(unittest.TestCase):
             defaults=[('v', None)],
             items={'m': LV(lambda: create_object(expression=LV(lambda: resolve('v'))))}
         ))}, expression=LV(
-            lambda: call(get(create_string('m'), call(resolve('O'), [(None, LV(lambda: create_number(1)))])), [])))
+            lambda: call(attribute(create_string('m'), call(resolve('O'), [(None, LV(lambda: create_number(1)))])), [])))
         self._test(result, 1)
 
     def test_simple_map(self):
@@ -278,13 +279,13 @@ class TestRuntime(unittest.TestCase):
             'f': LV(lambda: create_object(
                 defaults=[('e', None)],
                 expression=LV(
-                    lambda: call(get(create_string('+'), resolve('e')), [(None, LV(lambda: create_number(1)))])))),
+                    lambda: call(attribute(create_string('+'), resolve('e')), [(None, LV(lambda: create_number(1)))])))),
         }, expression=LV(lambda: call(create_object(items={
             'map': LV(lambda: create_object(
                 defaults=[('list', None)],
-                expression=LV(lambda: call(get(create_string('or'), call(
-                    get(create_string('+'), create_list(
-                        [call(resolve('f'), [(None, LV(lambda: get(create_number(0), resolve('list'))))])])),
+                expression=LV(lambda: call(attribute(create_string('or'), call(
+                    attribute(create_string('+'), create_list(
+                        [call(resolve('f'), [(None, LV(lambda: attribute(create_number(0), resolve('list'))))])])),
                     [(None, LV(lambda: call(
                         resolve('me'),
                         [(None, LV(lambda: slice(resolve('list'), 1)))]
@@ -307,13 +308,13 @@ class TestRuntime(unittest.TestCase):
             'f': LV(lambda: create_object(
                 defaults=[('e', None)],
                 expression=LV(
-                    lambda: call(get(create_string('+'), resolve('e')), [(None, LV(lambda: create_number(1)))])))),
+                    lambda: call(attribute(create_string('+'), resolve('e')), [(None, LV(lambda: create_number(1)))])))),
         }, expression=LV(lambda: call(create_object(items={
             'map': LV(lambda: create_object(
                 defaults=[('list', None)],
-                expression=LV(lambda: call(get(create_string('or'), call(
-                    get(create_string('+'), create_list(
-                        [call(resolve('f'), [(None, LV(lambda: get(create_number(0), resolve('list'))))])])),
+                expression=LV(lambda: call(attribute(create_string('or'), call(
+                    attribute(create_string('+'), create_list(
+                        [call(resolve('f'), [(None, LV(lambda: attribute(create_number(0), resolve('list'))))])])),
                     [(None, LV(lambda: call(
                         resolve('me'),
                         [(None, LV(lambda: slice(resolve('list'), 1)))]
@@ -325,46 +326,46 @@ class TestRuntime(unittest.TestCase):
     def test_list_length1(self):
         # [].length()
         result = evaluate_module(
-            expression=LV(lambda: call(get(create_string('length'), create_list([])), [])))
+            expression=LV(lambda: call(attribute(create_string('length'), create_list([])), [])))
         self._test(result, 0)
 
     def test_list_length2(self):
         # [0, 1, 2].length()
         result = evaluate_module(
-            expression=LV(lambda: call(get(create_string('length'), create_list([create_number(0),
-                                                                                 create_number(1),
-                                                                                 create_number(2)])), [])))
+            expression=LV(lambda: call(attribute(create_string('length'), create_list([create_number(0),
+                                                                                       create_number(1),
+                                                                                       create_number(2)])), [])))
         self._test(result, 3)
 
     def test_dict_length1(self):
         # {}.length()
         result = evaluate_module(
-            expression=LV(lambda: call(get(create_string('length'), create_object()), [])))
+            expression=LV(lambda: call(attribute(create_string('length'), create_object()), [])))
         self._test(result, 0)
 
     def test_dict_length2(self):
         # {a: 1
         #  b: 2}.length()
         result = evaluate_module(
-            expression=LV(lambda: call(get(create_string('length'), create_object(items={'a': None, 'b': None})), [])))
+            expression=LV(lambda: call(attribute(create_string('length'), create_object(items={'a': None, 'b': None})), [])))
         self._test(result, 2)
 
     def test_string_lenght1(self):
         # ''.length()
         result = evaluate_module(
-            expression=LV(lambda: call(get(create_string('length'), create_string('')), [])))
+            expression=LV(lambda: call(attribute(create_string('length'), create_string('')), [])))
         self._test(result, 0)
 
     def test_string_lenght2(self):
         # 'abc'.length()
         result = evaluate_module(
-            expression=LV(lambda: call(get(create_string('length'), create_string('abc')), [])))
+            expression=LV(lambda: call(attribute(create_string('length'), create_string('abc')), [])))
         self._test(result, 3)
 
     def test_expression_get1(self):
         # {a: 1}['a']
         result = evaluate_module(
-            expression=LV(lambda: get(create_string('a'), create_object(items={'a': LV(lambda: create_number(1))}))))
+            expression=LV(lambda: attribute(create_string('a'), create_object(items={'a': LV(lambda: create_number(1))}))))
         self._test(result, 1)
 
     def test_expression_get2(self):
@@ -374,13 +375,13 @@ class TestRuntime(unittest.TestCase):
         result = evaluate_module(
             items={'A': LV(lambda: create_object(items={'a': LV(lambda: create_number(2))})),
                    'B': LV(lambda: create_object(items={'b': LV(lambda: create_string('a'))}))},
-            expression=LV(lambda: get(get(create_string('b'), resolve('B')), resolve('A'))))
+            expression=LV(lambda: attribute(attribute(create_string('b'), resolve('B')), resolve('A'))))
         self._test(result, 2)
 
     def test_string_add(self):
         # 'a' + 'b'
         result = evaluate_module(
-            expression=LV(lambda: call(get(create_string('+'), create_string('a')), [(None, LV(lambda: create_string('b')))])))
+            expression=LV(lambda: call(attribute(create_string('+'), create_string('a')), [(None, LV(lambda: create_string('b')))])))
         self._test(result, 'ab')
 
     def test_string_slice(self):

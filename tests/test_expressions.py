@@ -25,6 +25,39 @@ class TestBase(TestCase):
         self.assertTrue(type(output.raw) is WRException)
 
 
+class TestFunction(TestBase):
+    def test_expression1(self):
+        e = '''
+        1'''
+        self._test(e, 1)
+
+    def test_let1(self):
+        e = '''
+        a: 2
+        a'''
+        self._test(e, 2)
+
+    def test_define1(self):
+        e = '''
+        f: (){ 3 }
+        f()'''
+        self._test(e, 3)
+
+    def test_define_argument1(self):
+        e = '''
+        f: (a){ a }
+        f(4)'''
+        self._test(e, 4)
+
+    def test_define_object_static1(self):
+        e = '''
+        o: (){
+          m: (){ 5 }
+        }
+        o.m()'''
+        self._test(e, 5)
+
+
 class TestList(TestBase):
     def test_length1(self):
         e = '''
@@ -118,32 +151,59 @@ class TestString(TestBase):
         'abc'[1:2]'''
         self._test(e, 'b')
 
+    def test_add1(self):
+        e = """
+        'a' + 'b'"""
+        self._test(e, 'ab')
+
+    def test_add2(self):
+        e = """
+        '' + 'b'"""
+        self._test(e, 'b')
+
+    def test_add3(self):
+        e = """
+        'a' + ''"""
+        self._test(e, 'a')
+
+
+class TestDictionary(TestBase):
+    def test_create1(self):
+        e = '''
+        {}'''
+        self._test(e, {})
+
+    def test_get1(self):
+        e = '''
+        {'a': 1}['a']'''
+        self._test(e, 1)
+
 
 class Experimental(TestBase):
     def test_import_re1(self):
         expression = '''
         RegularExpressions: import
-        RegularExpressions.Node({a: 1}).match('a')'''
+        RegularExpressions.Node({'a': 1}).match('a')'''
         expected_output = True  # TODO apparently 1 == True, not sure this works fine
         self._test(expression, expected_output)
 
     def test_import_re2(self):
         expression = '''
         RegularExpressions: import
-        RegularExpressions.Node({a: 1}).match('abc')'''
+        RegularExpressions.Node({'a': 1}).match('abc')'''
         expected_output = True  # TODO apparently 1 == True, not sure this works fine
         self._test(expression, expected_output)
 
     def test_import_re_failed1(self):
         expression = '''
         RegularExpressions: import
-        RegularExpressions.Node({a: 1}).match('bca')'''
+        RegularExpressions.Node({'a': 1}).match('bca')'''
         self._test_failed(expression)
 
     def test_import_re_failed2(self):
         expression = '''
         RegularExpressions: import
-        RegularExpressions.Node({a: 1}).match('')'''
+        RegularExpressions.Node({'a': 1}).match('')'''
         self._test_failed(expression)
 
     def test_import_re_automaton(self):
@@ -151,7 +211,7 @@ class Experimental(TestBase):
         RegularExpressions: import
         input: 'ab'
         {
-           RegularExpressions.Automaton([RegularExpressions.Node({a: 1}),
-                                         RegularExpressions.Node({b: 2})]).match(input)
+           RegularExpressions.Automaton([RegularExpressions.Node({'a': 1}),
+                                         RegularExpressions.Node({'b': 2})]).match(input)
         }()'''
         self._test(expression, True)

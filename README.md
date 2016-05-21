@@ -4,7 +4,20 @@ Whisper programming language python interpreter
   0. Prerequisites
 
     Python 2.7
-
+    virtualenv 14.0.6
+    
+  1. Running some code
+    
+    First thing you need to do is setup the hashbang inside `cli.py` to
+    point to the correct instance of python. Then create a symlink to
+    this file inside your bin directory
+    
+    `sudo ln -s /local/path/to/cli.py /usr/local/bin/whisper`
+    
+    Create a script, for example `hello.w`, then you can execute it with
+    
+    `whisper hello.w`
+    
 2. Tutorial
 
   1. Hello world
@@ -76,7 +89,7 @@ Whisper programming language python interpreter
     There are Numbers, Strings, Lists, Dictionaries and Functions. Functions also serve as
     Objects by a bit of witchcraft/by design. Every basic type is an object.
     
-    ``whisper
+    ```whisper
     # basicTypes.w - Built in objects examples
     number0: 0               # currently only integers, will support floats also
     string1: 'String'        # very basic - no escapes etc. 

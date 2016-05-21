@@ -27,12 +27,10 @@ def evaluate(node):
             _args.append((evaluate(i) if i else None, LV(_partial(evaluate, e))))
         return call(evaluate(function), _args)
 
-    if command == 'create_dict':
-        defaults, items, expression = node[1:]
-
-        return create_object(defaults=[(evaluate(i).raw, LV(_partial(evaluate, e)) if e else None) for i, e in defaults],
-                             items=dict([(evaluate(k).raw, LV(_partial(evaluate, v))) for k, v in items.items()]),
-                             expression=LV(_partial(evaluate, expression)))
+    if command == 'create_dictionary':
+        native = node[1]
+        evaluated = dict([(evaluate(k).raw, evaluate(v)) for k, v in native])
+        return create_dictionary(evaluated)
 
     if command == 'create_list':
         native = node[1]
@@ -46,6 +44,13 @@ def evaluate(node):
     if command == 'create_string':
         native = node[1]
         return create_string(native)
+
+    if command == 'create_scope':
+        defaults, items, expression = node[1:]
+
+        return create_object(defaults=[(evaluate(i).raw, LV(_partial(evaluate, e)) if e else None) for i, e in defaults],
+                             items=dict([(evaluate(k).raw, LV(_partial(evaluate, v))) for k, v in items.items()]),
+                             expression=LV(_partial(evaluate, expression)))
 
     if command == 'get':
         object, item = node[1:]
@@ -69,7 +74,7 @@ def evaluate(node):
         if object is None:
             return resolve(evaluate(item).raw)
         else:  # get
-            return get(evaluate(item), evaluate(object))
+            return attribute(evaluate(item), evaluate(object))
 
     if command == 'slice':
         object, _from, _to = node[1:]
@@ -148,26 +153,27 @@ def resolve(ident):
     return output
 
 
-def get(object, scope):
-    logger.debug('get {} in {}'.format(object.raw, scope._id))
+def attribute(object, scope):
+    logger.debug('attribute {} in {}'.format(object.raw, scope._id))
     value = object.raw
     if value in scope.items:
         output = _new_with_self(_expression_with_scope(scope.items[value], lambda: _item_resolution_scope(scope))(), scope)
         logger.debug('get returned {}'.format(output._id))
         return output
-    try:
-        return _at_index(value, scope)
-    except:  # all the bad things that happen when you do not_a_list[not_a_number] in python
-        pass
 
     return create_failed(WRException('Attribute error: `%s`' % value))
 
 
-def _at_index(index, list):
+def get(object, scope):
+    logger.debug('get {} in {}'.format(object.raw, scope._id))
     try:
-        return list.raw[index]
+        index = object.raw
+        native = scope.raw
+        return native[index]
     except IndexError as e:
         return create_failed(WRException('Index out of range: %s' % index))
+    except KeyError as e:
+        return create_failed(WRException('Key error: %s' % index))
 
 
 def slice(list, _from, _to=None):
@@ -220,7 +226,7 @@ def _arguments(arguments, defaults):
 
 
 def create_object(defaults=[], items={}, expression=None):
-    output = create_dict(items)
+    output = create_dictionary(items)
 
     output.defaults = defaults
     output.items.update(items)
@@ -298,11 +304,11 @@ def create_list(native):
 
         'map': LV(lambda: create_object(
             defaults=[('function', None)],
-            expression=LV(lambda: call(get(create_string('or'), call(
-                get(create_string('+'), create_list(
+            expression=LV(lambda: call(attribute(create_string('or'), call(
+                attribute(create_string('+'), create_list(
                     [call(resolve('function'), [(None, LV(lambda: get(create_number(0), resolve('self'))))])])),
                 [(None, LV(lambda: call(
-                    get(create_string('map'), slice(resolve('self'), 1)),
+                    attribute(create_string('map'), slice(resolve('self'), 1)),
                     [(None, LV(lambda: resolve('function')))]
                 )))]
             )), [(None, LV(lambda: create_list([])))])))),
@@ -312,19 +318,19 @@ def create_list(native):
         'reduce': LV(lambda: create_object(
             defaults=[('function', None)],
             expression=LV(lambda: call(
-                get(create_string('or'),
-                    call(call(resolve('function'),
-                              [(None, LV(lambda: get(create_number(0), resolve('self'))))]),
-                         [(None, LV(lambda: call(
-                             get(create_string('reduce'),
-                                 slice(resolve('self'), 1)),
+                attribute(create_string('or'),
+                          call(call(resolve('function'),
+                                    [(None, LV(lambda: get(create_number(0), resolve('self'))))]),
+                               [(None, LV(lambda: call(
+                             attribute(create_string('reduce'),
+                                       slice(resolve('self'), 1)),
                              [(None, LV(lambda: resolve('function')))])))])),
                 [(None, LV(lambda: get(create_number(0), resolve('self'))))])))),
     })
     return output
 
 
-def create_dict(native):
+def create_dictionary(native):
     output = _create_native(native)
     output.items.update({
         'length': LV(lambda: create_object(
@@ -352,9 +358,15 @@ def _native_length(o):
 
 def _native_add(a, b):
     try:
-        return create_number(a.raw + b.raw)
-    except TypeError as e:
-        return create_failed(e)
+        native = a.raw + b.raw
+        return {
+            int: create_number,
+            list: create_list,
+            str: create_string,
+        }[type(native)](native)
+    except Exception as e:
+        logger.debug(e)  # TODO narrow down exception list
+        return create_failed(WRException('Cannot add types: %s, %s' % (type(a.raw), type(b.raw))))
 
 
 def evaluate_module(items={}, expression=None):
