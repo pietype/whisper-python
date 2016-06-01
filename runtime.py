@@ -24,7 +24,7 @@ def evaluate(node):
         # things evaluate in the wrong order inside a comprehension
         _args = []
         for i, e in arguments:
-            _args.append((evaluate(i) if i else None, LV(_partial(evaluate, e))))
+            _args.append((evaluate(i).raw if i else None, LV(_partial(evaluate, e))))
         return call(evaluate(function), _args)
 
     if command == 'create_dictionary':
@@ -48,9 +48,9 @@ def evaluate(node):
     if command == 'create_scope':
         defaults, items, expression = node[1:]
 
-        return create_object(defaults=[(evaluate(i).raw, LV(_partial(evaluate, e)) if e else None) for i, e in defaults],
-                             items=dict([(evaluate(k).raw, LV(_partial(evaluate, v))) for k, v in items.items()]),
-                             expression=LV(_partial(evaluate, expression)))
+        return create_scope(defaults=[(evaluate(i).raw, LV(_partial(evaluate, e)) if e else None) for i, e in defaults],
+                            items=dict([(evaluate(k).raw, LV(_partial(evaluate, v))) for k, v in items.items()]),
+                            expression=LV(_partial(evaluate, expression)))
 
     if command == 'get':
         object, item = node[1:]
@@ -154,22 +154,25 @@ def resolve(ident):
 
 
 def attribute(object, scope):
-    logger.debug('attribute {} in {}'.format(object.raw, scope._id))
     value = object.raw
     if value in scope.items:
         output = _new_with_self(_expression_with_scope(scope.items[value], lambda: _item_resolution_scope(scope))(), scope)
-        logger.debug('get returned {}'.format(output._id))
+        logger.debug('attribute {} in {}, returned {}'.format(object.raw, scope._id, output._id))
         return output
 
     return create_failed(WRException('Attribute error: `%s`' % value))
 
 
-def get(object, scope):
-    logger.debug('get {} in {}'.format(object.raw, scope._id))
+def get(object, gettable):
     try:
         index = object.raw
-        native = scope.raw
-        return native[index]
+        native = gettable.raw
+        output = native[index]
+        # hack handle native string get
+        if type(output) is str:
+            output = create_string(output)
+        logger.debug('get {} in {}, returned {}'.format(object.raw, gettable._id, output._id))
+        return output
     except IndexError as e:
         return create_failed(WRException('Index out of range: %s' % index))
     except KeyError as e:
@@ -225,7 +228,7 @@ def _arguments(arguments, defaults):
     return output
 
 
-def create_object(defaults=[], items={}, expression=None):
+def create_scope(defaults=[], items={}, expression=None):
     output = create_dictionary(items)
 
     output.defaults = defaults
@@ -234,29 +237,18 @@ def create_object(defaults=[], items={}, expression=None):
     output.parent = scope_stack[-1]
     output.arguments_scope = output.parent
 
-    # logger.debug('create object {} {} {} (parent {})'.format(output._id, defaults, items, output.parent._id))
+    # logger.debug('create scope {} {} {} (parent {})'.format(output._id, defaults, items, output.parent._id))
     return output
 
 
-_native_cache = {}
 def _create_native(value):
-    try:
-        if value in _native_cache:
-            return _native_cache[value]
-    except TypeError:  # unhashable type
-        pass
-
     output = Object()
     output.items = {
-        '+': LV(lambda: create_object(
-            defaults=[('other', None)],
-            expression=LV(lambda: _native_add(resolve('self'), resolve('other')))
-        )),
-        'or': LV(lambda: create_object(
+        'or': LV(lambda: create_scope(
             defaults=[('other', None)],
             expression=LV(lambda: resolve('self'))
         )),
-        'then': LV(lambda: create_object(
+        'then': LV(lambda: create_scope(
             defaults=[('callable', None)],
             expression=LV(lambda: call(resolve('callable'), [(None, LV(lambda: resolve('self')))]))
         )),
@@ -265,19 +257,21 @@ def _create_native(value):
     output.arguments_scope = output.parent
     output.raw = value
 
-    try:
-        _native_cache[value] = output
-    except TypeError:  # unhashable type
-        pass
-
-    # logger.debug('create native {} {}'.format(output._id, value))
+    logger.debug('create native {} {}'.format(output._id, value))
     return output
 
 
 def create_number(native):
     output = _create_native(native)
     output.items.update({
-
+        '+': LV(lambda: create_scope(
+            defaults=[('other', None)],
+            expression=LV(lambda: _native_add(resolve('self'), resolve('other')))
+        )),
+        '=': LV(lambda: create_scope(
+            defaults=[('other', None)],
+            expression=LV(lambda: _native_equals(resolve('self'), resolve('other')))
+        )),
     })
     return output
 
@@ -285,8 +279,12 @@ def create_number(native):
 def create_string(native):
     output = _create_native(native)
     output.items.update({
-        'length': LV(lambda: create_object(
+        'length': LV(lambda: create_scope(
             expression=LV(lambda: _native_length(resolve('self')))
+        )),
+        '+': LV(lambda: create_scope(
+            defaults=[('other', None)],
+            expression=LV(lambda: _native_add(resolve('self'), resolve('other')))
         )),
     })
     return output
@@ -298,11 +296,14 @@ def create_list(native):
             return e
     output = _create_native(native)
     output.items.update({
-        'length': LV(lambda: create_object(
+        '+': LV(lambda: create_scope(
+            defaults=[('other', None)],
+            expression=LV(lambda: _native_add(resolve('self'), resolve('other')))
+        )),
+        'length': LV(lambda: create_scope(
             expression=LV(lambda: _native_length(resolve('self')))
         )),
-
-        'map': LV(lambda: create_object(
+        'map': LV(lambda: create_scope(
             defaults=[('function', None)],
             expression=LV(lambda: call(attribute(create_string('or'), call(
                 attribute(create_string('+'), create_list(
@@ -315,7 +316,7 @@ def create_list(native):
         # reduce: (f){
         #   f(self[0])(self[1:].reduce(f)) or self[0]
         # }
-        'reduce': LV(lambda: create_object(
+        'reduce': LV(lambda: create_scope(
             defaults=[('function', None)],
             expression=LV(lambda: call(
                 attribute(create_string('or'),
@@ -333,7 +334,7 @@ def create_list(native):
 def create_dictionary(native):
     output = _create_native(native)
     output.items.update({
-        'length': LV(lambda: create_object(
+        'length': LV(lambda: create_scope(
             expression=LV(lambda: _native_length(resolve('self')))
         )),
     })
@@ -343,10 +344,11 @@ def create_dictionary(native):
 def create_failed(value):
     output = _create_native(value)
     output.items = {
-        'or': LV(lambda: create_object(
+        'or': LV(lambda: create_scope(
             defaults=[('other', None)],
             expression=LV(lambda: resolve('other'))
         )),
+        'then': LV(lambda: resolve('self')),
     }
 
     return output
@@ -369,8 +371,18 @@ def _native_add(a, b):
         return create_failed(WRException('Cannot add types: %s, %s' % (type(a.raw), type(b.raw))))
 
 
+def _native_equals(a, b):
+    try:
+        if a.raw == b.raw:
+            return a  # or b
+        return create_failed(False)
+    except Exception as e:
+        logger.debug(e)  # TODO narrow down exceptions
+        return create_failed(e)
+
+
 def evaluate_module(items={}, expression=None):
-    module = create_object(items=items, expression=expression)
+    module = create_scope(items=items, expression=expression)
 
     return call(module, [])
 

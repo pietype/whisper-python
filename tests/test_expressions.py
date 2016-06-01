@@ -1,4 +1,4 @@
-from unittest import TestCase, skip
+from unittest import TestCase
 
 from parser import WhisperParser
 from runtime import evaluate
@@ -49,6 +49,24 @@ class TestFunction(TestBase):
         f(4)'''
         self._test(e, 4)
 
+    def test_define_argument_default1(self):
+        e = '''
+        f: (a: 5){ a }
+        f()'''
+        self._test(e, 5)
+
+    def test_define_argument_default2(self):
+        e = '''
+        f: (a, b: 1){ a + b }
+        f(5)'''
+        self._test(e, 6)
+
+    def test_define_argument_default3(self):
+        e = '''
+        f: (a, b: 1){ a + b }
+        f(5, b: 2)'''
+        self._test(e, 7)
+
     def test_define_object_static1(self):
         e = '''
         o: (){
@@ -56,6 +74,24 @@ class TestFunction(TestBase):
         }
         o.m()'''
         self._test(e, 5)
+
+    def test_constructor(self):
+        e = '''
+        O: (v){
+          m: (){ v }
+        }
+        O(1).m()'''
+        self._test(e, 1)
+
+    def test_then(self):
+        e = '''
+        1 then (n){ n + 1 }'''
+        self._test(e, 2)
+
+    def test_then_failed(self):
+        e = '''
+        [][0] then (){ 1 }'''
+        self._test_failed(e)
 
 
 class TestList(TestBase):
@@ -166,6 +202,42 @@ class TestString(TestBase):
         'a' + ''"""
         self._test(e, 'a')
 
+    def test_length(self):
+        e = '''
+        "abc".length()'''
+        self._test(e, 3)
+
+    def test_get1(self):
+        e = '''
+        "ab"[0]'''
+        self._test(e, 'a')
+
+    def test_get2(self):
+        e = '''
+        "ab"[1]'''
+        self._test(e, 'b')
+
+    def test_get_expression(self):
+        e = '''
+        "abc"[1 + 1]'''
+        self._test(e, 'c')
+
+
+class TestNumber(TestBase):
+    def test_add1(self):
+        e = '''
+        1.+(1)'''
+        self._test(e, 2)
+
+    def test_add1_infix(self):
+        e = '''
+        1 + 2'''
+        self._test(e, 3)
+
+    def test_equal1_infix(self):
+        e = '1 = 1'
+        self._test(e, True)
+
 
 class TestDictionary(TestBase):
     def test_create1(self):
@@ -178,40 +250,98 @@ class TestDictionary(TestBase):
         {'a': 1}['a']'''
         self._test(e, 1)
 
+    # def test_dynamic_get(self):
+
+
+class TestScoping(TestBase):
+    def test_argument_accessibility1(self):
+        e = '''
+        f: (a){
+          b: a
+          b
+        }
+        f(1)'''
+        self._test(e, 1)
+
+    def test_argument_accessibility2(self):
+        e = '''
+        f: (a){
+          g: (b){
+            c: b
+            c
+          }
+          g(a)
+        }
+        f(1)'''
+        self._test(e, 1)
+
+    def test_argument_accessibility3(self):
+        e = '''
+        f: (a){
+          g: (b){
+            h: (b){
+              c: a + b  # a needs to be available
+              a + c
+            }
+            h(b)
+          }
+          g(a)
+        }
+
+        f(2)'''
+        self._test(e, 6)
+
+    def test_item_resolution1(self):
+        e = '''
+        m: 1
+        (){
+          m: m
+          m
+        }()'''
+        self._test(e, 1)
+
+    def test_item_resolution2(self):
+        e = '''
+        m: 1
+        (){
+          m: m
+        }.m'''
+        self._test(e, 1)
+
+    def test_item_accessibility1(self):
+        e = '''f: (a){
+          a + 1
+        }
+
+        (){
+          g: (a){
+            f(a) + 1
+          }
+          g(1)
+        }()'''
+        self._test(e, 3)
+
+    # def test_constructor(self):
+    #     e = '''
+    #     o: (a){
+    #       m: (){ a }
+    #     }
+    #
+    #     [o(0), o(1)][1].m()
+    #     '''
+    #     self._test(e, 1)
+
 
 class Experimental(TestBase):
-    def test_import_re1(self):
-        expression = '''
+    def test_import_re_automaton1(self):
+        e = '''
         RegularExpressions: import
-        RegularExpressions.Node({'a': 1}).match('a')'''
-        expected_output = True  # TODO apparently 1 == True, not sure this works fine
-        self._test(expression, expected_output)
+        RegularExpressions.Automaton([{'a': 1}]).match('a')'''
+        self._test(e, 1)
 
-    def test_import_re2(self):
-        expression = '''
+    def test_import_re_automaton2(self):
+        e = '''
         RegularExpressions: import
-        RegularExpressions.Node({'a': 1}).match('abc')'''
-        expected_output = True  # TODO apparently 1 == True, not sure this works fine
-        self._test(expression, expected_output)
-
-    def test_import_re_failed1(self):
-        expression = '''
-        RegularExpressions: import
-        RegularExpressions.Node({'a': 1}).match('bca')'''
-        self._test_failed(expression)
-
-    def test_import_re_failed2(self):
-        expression = '''
-        RegularExpressions: import
-        RegularExpressions.Node({'a': 1}).match('')'''
-        self._test_failed(expression)
-
-    def test_import_re_automaton(self):
-        expression = '''
-        RegularExpressions: import
-        input: 'ab'
-        {
-           RegularExpressions.Automaton([RegularExpressions.Node({'a': 1}),
-                                         RegularExpressions.Node({'b': 2})]).match(input)
-        }()'''
-        self._test(expression, True)
+        RegularExpressions.Automaton([{'a': 1},
+                                      {'b': 2}]).match('ab')'''
+        self._test(e, 2)

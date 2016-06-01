@@ -40,7 +40,9 @@ class WhisperParser(object):
         output = self._parser.parse(string)
         if output and not self._errors:
             return output
-        raise WRException("Syntax error\n" + ''.join(map(pretty_print_syntax_errors(string), self._errors)))
+        exception = WRException("Syntax error\n" + ''.join(map(pretty_print_syntax_errors(string), self._errors)))
+        self._errors = []
+        raise exception
 
     @classmethod
     def _scope_values_to_dict(cls, dv):
@@ -91,6 +93,10 @@ class WhisperParser(object):
         'bind : ident'
         p[0] = [(p[1], None)]
 
+    def p_bind_default(self, p):
+        'bind : ident COLON infix_chain'
+        p[0] = [(p[1], p[3])]
+
     def p_bind_named(self, p):
         'bind : bind separator ident COLON infix_chain'
         p[0] = p[1] + [(p[3], p[5])]
@@ -119,6 +125,10 @@ class WhisperParser(object):
         'infix_chain : unresolved_infix_chain ident expression'
         p[0] = ('infix_chain', p[1] + [(p[2], p[3])])
 
+    def p_infix_chain_newline(self, p):
+        'infix_chain : unresolved_infix_chain ident newline expression'
+        p[0] = ('infix_chain', p[1] + [(p[2], p[4])])
+
     def p_unresolved_infix_chain_expression(self, p):
         'unresolved_infix_chain : expression'
         p[0] = [(None, p[1])]
@@ -126,6 +136,10 @@ class WhisperParser(object):
     def p_unresolved_infix_chain(self, p):
         'unresolved_infix_chain : unresolved_infix_chain ident expression'
         p[0] = p[1] + [(p[2], p[3])]
+
+    def p_unresolved_infix_chain_newline(self, p):
+        'unresolved_infix_chain : unresolved_infix_chain ident newline expression'
+        p[0] = p[1] + [(p[2], p[4])]
 
     def p_expression_number(self, p):
         'expression : NUMBER'
@@ -199,6 +213,10 @@ class WhisperParser(object):
         'expression : expression DOT ident'
         p[0] = ('resolve', p[3], p[1])
 
+    def p_expression_chain_newline(self, p):
+        'expression : expression DOT newline ident'
+        p[0] = ('resolve', p[4], p[1])
+
     def p_expression_scope(self, p):
         'expression : scope'
         p[0] = p[1]
@@ -208,20 +226,20 @@ class WhisperParser(object):
         p[0] = ('create_string', p[1])
 
     def p_expression_get(self, p):
-        'expression : expression LBRACKET newline_opt expression RBRACKET'
-        p[0] = ('get', p[1], p[4])
+        'expression : expression LBRACKET infix_chain RBRACKET'
+        p[0] = ('get', p[1], p[3])
 
     def p_expression_slice(self, p):
-        'expression : expression LBRACKET newline_opt expression newline_opt COLON newline_opt expression newline_opt RBRACKET'
-        p[0] = ('slice', p[1], p[4], p[8])
+        'expression : expression LBRACKET infix_chain COLON infix_chain RBRACKET'
+        p[0] = ('slice', p[1], p[3], p[5])
 
     def p_expression_slice_from_beginning(self, p):
-        'expression : expression LBRACKET newline_opt COLON newline_opt expression newline_opt RBRACKET'
-        p[0] = ('slice', p[1], ('create_number', 0), p[6])
+        'expression : expression LBRACKET COLON infix_chain RBRACKET'
+        p[0] = ('slice', p[1], ('create_number', 0), p[4])
 
     def p_expression_slice_to_end(self, p):
-        'expression : expression LBRACKET newline_opt expression newline_opt COLON newline_opt RBRACKET'
-        p[0] = ('slice', p[1], p[4], None)
+        'expression : expression LBRACKET infix_chain COLON RBRACKET'
+        p[0] = ('slice', p[1], p[3], None)
 
     def p_separator(self, p):
         '''separator : newline
