@@ -2,5 +2,9 @@
 *.pyc
 
 # ply compiled parser
-parser.out
-parsetab.py
+src/parser.out
+src/parsetab.py
+
+build/
+dist/
+whisper.egg-info/

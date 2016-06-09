@@ -2,15 +2,13 @@ import os
 
 from parser import WhisperParser
 from util import logger, Object, WRException, LazyValue as LV, _partial
+from core import modules
 
 
-_parser = WhisperParser(method='LALR')
+_parser = WhisperParser()
 
 
 # TODO patchwork, needs refactoring
-IMPORT_PATH = '/Users/grzegorz/Projects/Whisper/whisper/core'
-
-
 def evaluate(node):
     if node is None:  # no expression in object
         # logger.debug('create object')
@@ -391,10 +389,13 @@ _import_cache = {}
 def _import(path):
     if path.raw in _import_cache:
         return _import_cache[path.raw]
-    with open(os.path.join(IMPORT_PATH, path.raw) + '.w', 'r') as f:
-        node = _parser.parse(f.read())
+    try:
+        source = modules[path.raw]
+        node = _parser.parse(source)
         _import_cache[path] = node
         return node
+    except KeyError as e:
+        return create_failed("No such module: {}".format(path.raw))
 
 
 # bootstrap scope_stack

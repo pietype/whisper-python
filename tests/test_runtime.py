@@ -1,8 +1,8 @@
 import unittest
 
-from runtime import call, resolve, attribute, evaluate_module, create_scope, create_number, create_list, create_string, slice, \
+from src.runtime import call, resolve, attribute, evaluate_module, create_scope, create_number, create_list, create_string, slice, \
     get
-from util import LazyValue as LV, WRException
+from src.util import LazyValue as LV, WRException
 
 
 class TestRuntime(unittest.TestCase):

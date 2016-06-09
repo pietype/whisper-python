@@ -1,6 +1,6 @@
 import logging
 logging.basicConfig(level=logging.ERROR)
-logger = logging.getLogger('whisper')
+logger = logging.getLogger('src')
 logger.setLevel(logging.DEBUG)
 
 

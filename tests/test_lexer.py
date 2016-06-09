@@ -3,7 +3,7 @@ from unittest import TestCase
 
 class TestLexer(TestCase):
     def _test(self, string, expected_output):
-        from lexer import WhisperLexer
+        from src.lexer import WhisperLexer
         l = WhisperLexer()
         output = [(t.type, t.value) for t in l.tokenize(string)]
         self.assertEqual(output, expected_output)

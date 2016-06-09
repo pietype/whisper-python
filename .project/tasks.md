@@ -4,8 +4,6 @@
 [ ] Split `+` method at Whisper level
       Currently split by checking raw (python) type
 [x] Import
-[ ] re module
-  [x] Basic automaton
 [x] List
   [x] map
   [x] create_list has to take expressions
@@ -13,7 +11,7 @@
   [x] Map return value problem - reduce not in scope
 [ ] Dict
   [x] get
-  [ ] Figure out interface around dict
+  [ ] TODO
 [x] Lazy evaluation vs Failing expressions
   [x] Rewrite failed automaton implementation
   [x] Implement then 
@@ -29,7 +27,7 @@
 [ ] Write better lexer tests
       I messed up the tests by trying to reuse expressions from the parser tests.
     Write tests that actually test lexer logic.
-[ ] Refactor whisper code out of runtime
+[ ] Refactor whisper ast code out of runtime
       Preferably use pure whisper
   [ ] Native interface
 [ ] Interactive Debugger
@@ -37,4 +35,9 @@
   [ ] CLI
 [x] Fix default arguments
 [ ] Release
-  [ ] setup.py
+  [.] setup.py
+[ ] Core libraries
+  [ ] RegularExpressions
+    [x] Basic automaton
+    [ ] TODO
+  [ ] Play around writing things in whisper!

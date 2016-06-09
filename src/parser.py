@@ -25,13 +25,13 @@ def pretty_print_syntax_errors(input):
 
 
 class WhisperParser(object):
-    def __init__(self, **kwargs):
+    def __init__(self):
         self._calc_lexer = WhisperLexer()
 
         # build the parser
         self.tokens = self._calc_lexer.tokens
         self.lexer = self._calc_lexer._lexer
-        self._parser = yacc.yacc(module=self, **kwargs)
+        self._parser = yacc.yacc(module=self, debug=False, write_tables=False)
         self._errors = []
 
     def parse(self, string):

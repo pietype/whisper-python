@@ -1,11 +1,11 @@
 from unittest import TestCase, skip
 
-from parser import WhisperParser
+from src.parser import WhisperParser
 
 
 class TestParser(TestCase):
     def _test(self, string, expected_output):
-        p = WhisperParser(method='LALR')
+        p = WhisperParser()
         output = p.parse(string)
         self.assertEquals(output, expected_output)
 

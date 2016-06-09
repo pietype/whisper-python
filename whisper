@@ -1,15 +1,15 @@
-#!/Users/grzegorz/Projects/Whisper/venv/bin/python
-import sys
-import logging
+#!/usr/bin/python
+def main():
+    import sys
+    import logging
 
-from parser import WhisperParser
-from runtime import evaluate
-from util import WRException
+    from src.parser import WhisperParser
+    from src.runtime import evaluate
+    from src.util import WRException
 
-logging.getLogger('whisper').disabled = True
-parser = WhisperParser(method='LALR')
+    logging.getLogger('src').disabled = True
+    parser = WhisperParser()
 
-if __name__ == '__main__':
     input = None
     try:
         _program, file_name = sys.argv
@@ -26,3 +26,6 @@ if __name__ == '__main__':
 whisper file
 ''')
         exit(1)
+
+if __name__ == '__main__':
+    main()

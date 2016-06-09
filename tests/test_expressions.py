@@ -1,14 +1,14 @@
 from unittest import TestCase
 
-from parser import WhisperParser
-from runtime import evaluate
-from util import WRException
+from src.parser import WhisperParser
+from src.runtime import evaluate
+from src.util import WRException
 
 
 class TestBase(TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.parser = WhisperParser(method='LALR')
+        cls.parser = WhisperParser()
 
     def _test(self, expression, expected_result):
         node = self.parser.parse(expression)
